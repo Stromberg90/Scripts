@@ -1,0 +1,51 @@
+window -title "Curve to Cable";
+    frameLayout -label "Inputs" -collapsable true -borderStyle "etchedIn";
+        gridLayout -numberOfColumns 2 -cellWidthHeight 80 20;
+        text -label "Cable Radius:" -align "left";
+        floatField -min 0.0 -v 10.0 cableRad;
+        text -label "Cable Divisions:" -align "left";
+        intField -v 16 -min 3 cableDiv;
+        text -label "Curve Divisions:" -align "left";
+        intField -v 30 -min 1 curveDiv;
+        setParent ..;
+    rowLayout -numberOfColumns 2 -columnWidth3 120 120 120
+    -columnAlign3 "center" "center" "center";
+    button -label "Create" -command "runCableMaker(`floatField -query -value cableRad`, `intField -query -value cableDiv`, `intField -query -value curveDiv`)" -align "center";
+showWindow;
+global proc runCableMaker( float $cableRadius, int $cableDivision, int $curveDivision)
+{
+    string $curves[] = `ls -sl`;
+    for ($i = 0; $i < size($curves); $i++)
+    {
+        select $curves[$i];
+        string $extrudes[];
+        string $currentSelection[] = `ls -sl`;
+        string $curveName2[];
+        tokenize($currentSelection[0], ".", $curveName2);
+        select($curveName2[0] + ".cv[0]");
+        float $curveStart[] = `pointPosition -w`;
+        select($curveName2[0] + ".cv[1]");
+        float $secondCurvePoint[] = `pointPosition -w`;
+        string $secondCurvePointsLocator[] = `polySphere`;
+        xform -a -ws -t $secondCurvePoint[0] $secondCurvePoint[1] $secondCurvePoint[2];       
+        string $cableStart[] = `polyCylinder -sc 1 -sa $cableDivision -r $cableRadius`;
+        string $topCapVertex = getAttr($cableStart[1] + ".subdivisionsAxis") * 2 + 1;
+        select($cableStart[0] + ".vtx[" + $topCapVertex + "]");
+        ConvertSelectionToFaces;
+        InvertSelection;
+        Delete;       
+        select $cableStart[0];
+        CenterPivot;
+        xform -a -ws -t $curveStart[0] ($curveStart[1] -1) $curveStart[2];
+        delete `normalConstraint -aim 0 -1 0 $secondCurvePointsLocator[0] $cableStart[0]`;
+        select $cableStart[0];
+        $extrudes = `polyExtrudeFacet -inc $curveName2[0] -d $curveDivision -sma 85`;
+        delete $secondCurvePointsLocator;       
+        if($i == (size($curves) - 1))
+        {
+            connectControl cableRad ($cableStart[1] + ".radius");
+            connectControl curveDiv ($extrudes[0] + ".divisions");
+            connectControl cableDiv ($cableStart[1] + ".subdivisionsAxis");
+        }
+    }   
+}
