@@ -1,5 +1,5 @@
 window -title "Curve to Cable";
-    frameLayout -label "Inputs" -collapsable true -borderStyle "etchedIn";
+    frameLayout -label "Inputs" -collapsable true;
         gridLayout -numberOfColumns 2 -cellWidthHeight 80 20;
         text -label "Cable Radius:" -align "left";
         floatField -min 0.0 -v 10.0 cableRad;
@@ -15,6 +15,9 @@ showWindow;
 global proc runCableMaker( float $cableRadius, int $cableDivision, int $curveDivision)
 {
     string $curves[] = `ls -sl`;
+    string $cableRadControl = "connectControl cableRad ";
+    string $curveDivControl = "connectControl curveDiv ";
+    string $cableDivControl = "connectControl cableDiv ";
     for ($i = 0; $i < size($curves); $i++)
     {
         select $curves[$i];
@@ -40,12 +43,15 @@ global proc runCableMaker( float $cableRadius, int $cableDivision, int $curveDiv
         delete `normalConstraint -aim 0 -1 0 $secondCurvePointsLocator[0] $cableStart[0]`;
         select $cableStart[0];
         $extrudes = `polyExtrudeFacet -inc $curveName2[0] -d $curveDivision -sma 85`;
-        delete $secondCurvePointsLocator;       
+        delete $secondCurvePointsLocator;
+        $cableRadControl += ($cableStart[1] + ".radius ");
+        $curveDivControl += ($extrudes[0] + ".divisions ");
+        $cableDivControl += ($cableStart[1] + ".subdivisionsAxis ");               
         if($i == (size($curves) - 1))
         {
-            connectControl cableRad ($cableStart[1] + ".radius");
-            connectControl curveDiv ($extrudes[0] + ".divisions");
-            connectControl cableDiv ($cableStart[1] + ".subdivisionsAxis");
+            eval $cableRadControl;
+            eval $curveDivControl;
+            eval $cableDivControl;
         }
     }   
 }
