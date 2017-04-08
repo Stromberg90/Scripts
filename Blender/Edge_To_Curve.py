@@ -1,0 +1,141 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
+
+bl_info = {
+    "name": "Edges To Curve",
+    "category": "Object",
+    "description": "Converts selected edges into curve with extrusion",
+    "author": "Andreas Strømberg",
+    "version": (1, 0),
+    "blender": (2, 78, 0),
+}
+
+import bpy
+
+
+class MeshMode:
+    VERTEX = (True, False, False)
+    EDGE = (False, True, False)
+    FACE = (False, False, True)
+
+
+class ObjectMode:
+    OBJECT = 'OBJECT'
+    EDIT = 'EDIT'
+    POSE = 'POSE'
+    SCULPT = 'SCULPT'
+    VERTEX_PAINT = 'VERTEX_PAINT'
+    WEIGHT_PAINT = 'WEIGHT_PAINT'
+    TEXTURE_PAINT = 'TEXTURE_PAINT'
+    PARTICLE_EDIT = 'PARTICLE_EDIT'
+    GPENCIL_EDIT = 'GPENCIL_EDIT'
+
+
+class EventType:
+    MOUSEMOVE = 'MOUSEMOVE'
+    WHEELUPMOUSE = 'WHEELUPMOUSE'
+    WHEELDOWNMOUSE = 'WHEELDOWNMOUSE'
+    LEFTMOUSE = 'LEFTMOUSE'
+    RIGHTMOUSE = 'RIGHTMOUSE'
+    ESC = 'ESC'
+
+
+# noinspection PyAttributeOutsideInit
+class ModalEdgeToCurve(bpy.types.Operator):
+    bl_idname = "object.edge_to_curve"
+    bl_label = "Edges To Curve"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object.mode == ObjectMode.EDIT and context.active_object.type == 'MESH'
+
+    def execute(self, context):
+        context.object.data.bevel_depth = self.value / 100.0
+        context.object.data.bevel_resolution = self.resolution
+        return {'FINISHED'}
+
+    def modal(self, context, event):
+        if event.type == EventType.MOUSEMOVE:  # Apply
+            self.value = max(0, (event.mouse_x - self.start_value))
+        elif event.type == EventType.WHEELUPMOUSE:
+            self.resolution += 1
+        elif event.type == EventType.WHEELDOWNMOUSE and self.resolution > 1:
+            self.resolution -= 1
+        elif event.type == EventType.LEFTMOUSE:  # Confirm
+            context.scene.objects.active = self.original_object
+            bpy.ops.object.select_all(action='DESELECT')
+            self.original_object.select = True
+
+            bpy.ops.object.mode_set(mode=ObjectMode.EDIT)
+            context.tool_settings.mesh_select_mode = MeshMode.EDGE
+            return {'FINISHED'}
+        elif event.type in {EventType.RIGHTMOUSE, EventType.ESC}:  # Cancel
+            bpy.ops.object.delete()
+
+            context.scene.objects.active = self.original_object
+            bpy.ops.object.select_all(action='DESELECT')
+            self.original_object.select = True
+
+            bpy.ops.object.mode_set(mode=ObjectMode.EDIT)
+            context.tool_settings.mesh_select_mode = MeshMode.EDGE
+            return {'CANCELLED'}
+
+        self.execute(context)
+        return {'RUNNING_MODAL'}
+
+    def invoke(self, context, event):
+        if context.tool_settings.mesh_select_mode[0]:
+            context.tool_settings.mesh_select_mode = MeshMode.EDGE
+            if not context.object.data.total_vert_sel > 1:
+                return {'CANCELLED'}
+            context.tool_settings.mesh_select_mode = MeshMode.VERTEX
+
+        self.value = 0.0
+        self.start_value = event.mouse_x
+        self.resolution = 2
+        self.original_object = bpy.context.selected_objects[0]
+
+        bpy.ops.mesh.duplicate()
+        bpy.ops.mesh.separate()
+        bpy.ops.object.mode_set(mode=ObjectMode.OBJECT)
+        curve_object = context.selected_objects[0]
+        context.scene.objects.active = curve_object
+        bpy.ops.object.select_all(action='DESELECT')
+        curve_object.select = True
+        bpy.ops.object.convert(target='CURVE')
+        context.object.data.fill_mode = 'FULL'
+        context.object.data.bevel_resolution = self.resolution
+
+        self.execute(context)
+
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+
+def register():
+    bpy.utils.register_class(ModalEdgeToCurve)
+
+
+def unregister():
+    bpy.utils.unregister_class(ModalEdgeToCurve)
+
+
+if __name__ == "__main__":
+    register()
