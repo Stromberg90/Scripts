@@ -13,4 +13,4 @@ Usuage: Select one curve and one object, then search for Duplicate Along Curve i
 ### Maya Style Merge Tool
 ![](http://i.imgur.com/8W4r4M1.gif)
 
-Usuage: Select one curve and one object, then search for Merge Tool in the spacebar menu or hotkey object.merge_tool
+Usuage: Search for Merge Tool in the spacebar menu or hotkey object.merge_tool
