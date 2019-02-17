@@ -1,31 +1,49 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 2
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
+
 import bpy
 import bgl
+import gpu
+from gpu_extras.batch import batch_for_shader
 
 bl_info = {
     "name": "Merge Tool",
     "category": "User",
     "author": "Andreas Strømberg",
+    "blender": (2, 80, 0)
 }
 
 
 def draw_callback_px(self, context):
-
-    # 50% alpha, 2 pixel width line
-    bgl.glEnable(bgl.GL_BLEND)
-    bgl.glColor4f(1.0, 0.0, 0.0, 1.0)
-    bgl.glLineWidth(2)
-
-    bgl.glBegin(bgl.GL_LINES)
     if self.started:
-        bgl.glVertex2i(self.start_vertex[0], self.start_vertex[1])
-        bgl.glVertex2i(self.end_vertex[0], self.end_vertex[1])
+        bgl.glEnable(bgl.GL_BLEND)
+        bgl.glLineWidth(2)
 
-    bgl.glEnd()
+        coords = [self.start_vertex, self.end_vertex]
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": coords})
+        shader.bind()
+        shader.uniform_float("color", (1, 0, 0, 1))
+        batch.draw(shader)
 
     # restore opengl defaults
     bgl.glLineWidth(1)
     bgl.glDisable(bgl.GL_BLEND)
-    bgl.glColor4f(0.0, 0.0, 0.0, 1.0)
 
 
 def main(context, event, started):
@@ -88,11 +106,11 @@ class MergeTool(bpy.types.Operator):
 
             self.start_vertex = (0, 0)
             self.end_vertex = (0, 0)
-
-            context.window_manager.modal_handler_add(self)
+            self.started = False
             self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_PIXEL')
 
-            self.started = False
+            context.window_manager.modal_handler_add(self)
+
             return {'RUNNING_MODAL'}
         else:
             self.report({'WARNING'}, "Active space must be a View3d")
@@ -105,6 +123,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(MergeTool)
+
 
 if __name__ == "__main__":
     register()
