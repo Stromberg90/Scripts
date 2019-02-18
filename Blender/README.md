@@ -6,9 +6,9 @@
 Usuage: Search for Merge Tool in the spacebar menu or hotkey object.merge_tool
 
 ### Context Select(Emulates Maya's selections)
-![](https://i.imgur.com/2AFweOu.gif)
+![](http://i.imgur.com/FwF4o0r.gif)
 
-![](https://i.imgur.com/dNQprlQ.png)
+![](http://i.imgur.com/dNQprlQ.png)
 Usuage: Hotkey object.context_select to double-click and shift double-click, or whatever you use for adding to selection.
 
 ### Edges To Curve
