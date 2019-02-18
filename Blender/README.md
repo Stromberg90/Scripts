@@ -1,7 +1,7 @@
 # Blender
 
 ### Maya Style Merge Tool
-![](http://i.imgur.com/8W4r4M1.gif)
+![](http://i.imgur.com/bSsPEcB.gif)
 
 Usuage: Search for Merge Tool in the spacebar menu or hotkey object.merge_tool
 
