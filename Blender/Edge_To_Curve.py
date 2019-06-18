@@ -22,8 +22,9 @@ bl_info = {
     "category": "Object",
     "description": "Converts selected edges into curve with extrusion",
     "author": "Andreas Strømberg",
-    "version": (1, 0),
-    "blender": (2, 78, 0),
+    "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
+    "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
+    "blender": (2, 80, 0),
 }
 
 import bpy
@@ -55,8 +56,6 @@ class EventType:
     RIGHTMOUSE = 'RIGHTMOUSE'
     ESC = 'ESC'
 
-
-# noinspection PyAttributeOutsideInit
 class ModalEdgeToCurve(bpy.types.Operator):
     bl_idname = "object.edge_to_curve"
     bl_label = "Edges To Curve"
@@ -64,7 +63,7 @@ class ModalEdgeToCurve(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object.mode == ObjectMode.EDIT and context.active_object.type == 'MESH'
+        return context.active_object.mode == ObjectMode.EDIT and context.active_object.type == 'MESH' or context.active_object.type == 'CURVE'
 
     def execute(self, context):
         context.object.data.bevel_depth = self.value / 100.0
@@ -79,54 +78,60 @@ class ModalEdgeToCurve(bpy.types.Operator):
         elif event.type == EventType.WHEELDOWNMOUSE and self.resolution > 1:
             self.resolution -= 1
         elif event.type == EventType.LEFTMOUSE:  # Confirm
-            context.scene.objects.active = self.original_object
-            bpy.ops.object.select_all(action='DESELECT')
-            self.original_object.select = True
-
-            bpy.ops.object.mode_set(mode=ObjectMode.EDIT)
-            context.tool_settings.mesh_select_mode = MeshMode.EDGE
+            if context.active_object.type != 'CURVE':
+                context.view_layer.objects.active = self.original_object
+                bpy.ops.object.select_all(action='DESELECT')
+                self.original_object.select_set(True)
+                bpy.ops.object.mode_set(mode=ObjectMode.EDIT)
+                context.tool_settings.mesh_select_mode = MeshMode.EDGE
             return {'FINISHED'}
         elif event.type in {EventType.RIGHTMOUSE, EventType.ESC}:  # Cancel
-            bpy.ops.object.delete()
-
-            context.scene.objects.active = self.original_object
-            bpy.ops.object.select_all(action='DESELECT')
-            self.original_object.select = True
-
-            bpy.ops.object.mode_set(mode=ObjectMode.EDIT)
-            context.tool_settings.mesh_select_mode = MeshMode.EDGE
+            if context.active_object.type == 'CURVE':
+                context.object.data.bevel_depth = 0
+            else:
+                bpy.ops.object.delete()
+                context.view_layer.objects.active = self.original_object
+                bpy.ops.object.select_all(action='DESELECT')
+                self.original_object.select_set(True)
+                bpy.ops.object.mode_set(mode=ObjectMode.EDIT)
+                context.tool_settings.mesh_select_mode = MeshMode.EDGE
             return {'CANCELLED'}
 
         self.execute(context)
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
-        if context.tool_settings.mesh_select_mode[0]:
-            context.tool_settings.mesh_select_mode = MeshMode.EDGE
-            if not context.object.data.total_vert_sel > 1:
-                return {'CANCELLED'}
-            context.tool_settings.mesh_select_mode = MeshMode.VERTEX
-
         self.value = 0.0
         self.start_value = event.mouse_x
         self.resolution = 2
         self.original_object = bpy.context.selected_objects[0]
+        if context.active_object.type == 'CURVE':
+            context.object.data.fill_mode = 'FULL'
+            context.object.data.bevel_resolution = self.resolution
+            self.execute(context)
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
 
-        bpy.ops.mesh.duplicate()
-        bpy.ops.mesh.separate()
-        bpy.ops.object.mode_set(mode=ObjectMode.OBJECT)
-        curve_object = context.selected_objects[0]
-        context.scene.objects.active = curve_object
-        bpy.ops.object.select_all(action='DESELECT')
-        curve_object.select = True
-        bpy.ops.object.convert(target='CURVE')
-        context.object.data.fill_mode = 'FULL'
-        context.object.data.bevel_resolution = self.resolution
+        else:
+            if context.tool_settings.mesh_select_mode[0]:
+                context.tool_settings.mesh_select_mode = MeshMode.EDGE
+                if not context.object.data.total_vert_sel > 1:
+                    return {'CANCELLED'}
+                context.tool_settings.mesh_select_mode = MeshMode.VERTEX
 
-        self.execute(context)
-
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
+            bpy.ops.mesh.duplicate()
+            bpy.ops.mesh.separate()
+            bpy.ops.object.mode_set(mode=ObjectMode.OBJECT)
+            curve_object = context.selected_objects[-1]
+            context.view_layer.objects.active = curve_object
+            bpy.ops.object.select_all(action='DESELECT')
+            curve_object.select_set(True)
+            bpy.ops.object.convert(target='CURVE')
+            context.object.data.fill_mode = 'FULL'
+            context.object.data.bevel_resolution = self.resolution
+            self.execute(context)
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
 
 
 def register():

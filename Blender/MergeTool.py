@@ -25,6 +25,8 @@ bl_info = {
     "name": "Merge Tool",
     "category": "User",
     "author": "Andreas Strømberg",
+    "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
+    "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0)
 }
 

@@ -22,8 +22,9 @@ bl_info = {
     "category": "Object",
     "description": "Select a curve and an object, to duplicate object along curve.",
     "author": "Andreas Strømberg",
-    "version": (1, 0),
-    "blender": (2, 78, 0),
+    "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
+    "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
+    "blender": (2, 80, 0),
 }
 
 import bpy
@@ -42,8 +43,8 @@ def main(context):
     bpy.ops.object.transform_apply(scale=True)
 
     bpy.ops.object.select_all(action='DESELECT')
-    selected_object.select = True
-    context.scene.objects.active = selected_object
+    selected_object.select_set(True)
+    context.view_layer.objects.active = selected_object
 
     array_modifier = selected_object.modifiers.new(name='DUPLICATE_ARRAY', type='ARRAY')
     array_modifier.fit_type = 'FIT_CURVE'
