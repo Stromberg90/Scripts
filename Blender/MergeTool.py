@@ -19,6 +19,8 @@
 import bpy
 import bgl
 import gpu
+import bmesh
+import math
 from gpu_extras.batch import batch_for_shader
 
 bl_info = {
@@ -32,20 +34,24 @@ bl_info = {
 
 
 def draw_callback_px(self, context):
-    if self.started:
+    if self.started and self.start_vertex is not None and self.end_vertex is not None:
         bgl.glEnable(bgl.GL_BLEND)
-        bgl.glLineWidth(2)
 
-        coords = [self.start_vertex, self.end_vertex]
-        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        coords = [self.start_vertex.co, self.end_vertex.co]
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": coords})
         shader.bind()
         shader.uniform_float("color", (1, 0, 0, 1))
         batch.draw(shader)
 
-    # restore opengl defaults
-    bgl.glLineWidth(1)
-    bgl.glDisable(bgl.GL_BLEND)
+        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'POINTS', {"pos": coords})
+        shader.bind()
+        shader.uniform_float("color", (1, 0, 0, 1))
+        batch.draw(shader)
+
+        bgl.glLineWidth(1)
+        bgl.glDisable(bgl.GL_BLEND)
 
 
 def main(context, event, started):
@@ -68,9 +74,9 @@ class MergeTool(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def __init__(self):
-        self.started = None
         self.start_vertex = None
         self.end_vertex = None
+        self.started = False
         self._handle = None
 
     def modal(self, context, event):
@@ -81,20 +87,51 @@ class MergeTool(bpy.types.Operator):
             return {'PASS_THROUGH'}
         elif event.type == 'MOUSEMOVE':
             if self.started:
-                self.end_vertex = (event.mouse_region_x, event.mouse_region_y)
+                coord = event.mouse_region_x, event.mouse_region_y
+                bpy.ops.view3d.select(extend=False, location=coord)
 
+                selected_vertex = None
+                for v in self.bm.verts:
+                    if v.select:
+                        selected_vertex = v
+                        break
+
+                if selected_vertex:
+                    self.end_vertex = selected_vertex
         elif event.type == 'LEFTMOUSE':
             main(context, event, self.started)
             if not self.started:
                 if context.object.data.total_vert_sel == 1:
-                    self.start_vertex = (event.mouse_region_x, event.mouse_region_y)
-                    self.end_vertex = (event.mouse_region_x, event.mouse_region_y)
-                    self.started = True
-            elif context.object.data.total_vert_sel == 2:
-                bpy.ops.mesh.merge(type='LAST')
-                bpy.ops.ed.undo_push(message="Add an undo step *function may be moved*")
-                self.started = False
+                    selected_vertex = None
+                    for v in self.bm.verts:
+                        if v.select:
+                            selected_vertex = v
+                            break
 
+                    if selected_vertex:
+                        self.start_vertex = selected_vertex
+                    else:
+                        bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                        return {'CANCELLED'}
+                    self.started = True
+            elif self.start_vertex is self.end_vertex:
+                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                return {'CANCELLED'}
+            elif self.start_vertex is not None and self.end_vertex is not None:
+                self.start_vertex.select = True
+                self.end_vertex.select = True
+                try:
+                    bpy.ops.mesh.merge(type='LAST')
+                    bpy.ops.ed.undo_push(message="Add an undo step *function may be moved*")
+                except TypeError:
+                    pass
+                finally:
+                    self.start_vertex = None
+                    self.end_vertex = None
+                    self.started = False
+            else:
+                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                return {'CANCELLED'}
             return {'RUNNING_MODAL'}
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
@@ -104,12 +141,14 @@ class MergeTool(bpy.types.Operator):
 
     def invoke(self, context, event):
         if context.space_data.type == 'VIEW_3D':
-            args = (self, context)
-
-            self.start_vertex = (0, 0)
-            self.end_vertex = (0, 0)
+            self.start_vertex = None
+            self.end_vertex = None
             self.started = False
-            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_PIXEL')
+            self.me = bpy.context.object.data
+            self.bm = bmesh.from_edit_mesh(self.me)
+
+            args = (self, context)
+            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_VIEW')
 
             context.window_manager.modal_handler_add(self)
 
