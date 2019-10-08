@@ -26,7 +26,8 @@ bl_info = {
     "author": "Andreas Strømberg",
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
-    "blender": (2, 80, 0)
+    "blender": (2, 80, 0),
+    "version": (1, 0)
 }
 
 
