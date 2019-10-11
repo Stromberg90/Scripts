@@ -27,9 +27,19 @@ bl_info = {
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 0)
+    "version": (1, 0, 1)
 }
 
+class ObjectMode:
+    OBJECT = 'OBJECT'
+    EDIT = 'EDIT'
+    POSE = 'POSE'
+    SCULPT = 'SCULPT'
+    VERTEX_PAINT = 'VERTEX_PAINT'
+    WEIGHT_PAINT = 'WEIGHT_PAINT'
+    TEXTURE_PAINT = 'TEXTURE_PAINT'
+    PARTICLE_EDIT = 'PARTICLE_EDIT'
+    GPENCIL_EDIT = 'GPENCIL_EDIT'
 
 def maya_vert_select(context):
     me = context.object.data
@@ -213,28 +223,29 @@ class OBJECT_OT_context_select(bpy.types.Operator):
         return context.active_object is not None
 
     def execute(self, context):
-        # Checks if we are in vertex selection mode.
-        if context.tool_settings.mesh_select_mode[0]:
-            maya_vert_select(context)
+        if context.object.mode == ObjectMode.EDIT:
+            # Checks if we are in vertex selection mode.
+            if context.tool_settings.mesh_select_mode[0]:
+                maya_vert_select(context)
 
-        # Checks if we are in edge selection mode.
-        if context.tool_settings.mesh_select_mode[1]:
-            bpy.ops.object.mode_set(mode='OBJECT')
-            selected_edges = [e for e in context.object.data.edges if e.select]
+            # Checks if we are in edge selection mode.
+            if context.tool_settings.mesh_select_mode[1]:
+                bpy.ops.object.mode_set(mode='OBJECT')
+                selected_edges = [e for e in context.object.data.edges if e.select]
 
-            # Switch back to edge mode
-            bpy.ops.object.mode_set(mode='EDIT')
-            context.tool_settings.mesh_select_mode = (False, True, False)
+                # Switch back to edge mode
+                bpy.ops.object.mode_set(mode='EDIT')
+                context.tool_settings.mesh_select_mode = (False, True, False)
 
-            if len(selected_edges) > 0:
-                maya_edge_select(context)
+                if len(selected_edges) > 0:
+                    maya_edge_select(context)
 
-        # Checks if we are in face selection mode.
-        if context.tool_settings.mesh_select_mode[2]:
-            if context.area.type == 'VIEW_3D':
-                maya_face_select(context)
-            elif context.area.type == 'IMAGE_EDITOR':
-                bpy.ops.uv.select_linked(extend=False)
+            # Checks if we are in face selection mode.
+            if context.tool_settings.mesh_select_mode[2]:
+                if context.area.type == 'VIEW_3D':
+                    maya_face_select(context)
+                elif context.area.type == 'IMAGE_EDITOR':
+                    bpy.ops.uv.select_linked_pick(extend=False)
 
         return {'FINISHED'}
 
