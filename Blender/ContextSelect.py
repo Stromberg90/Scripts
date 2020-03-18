@@ -152,10 +152,21 @@ class OBJECT_OT_context_select(bpy.types.Operator):
 
         select_face(active_face)
 
+        bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
+        bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+        bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='FACE')
+        two_loop_faces = [f.index for f in bm.faces if f.select]
+
+        select_face(active_face)
+
         if previous_active_face.index in loop_faces and not previous_active_face.index == active_face.index:
             if previous_active_face.index in relevant_neighbour_faces:
-                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
-            elif active_face.index in loop_faces:
+                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
+            elif active_face.index in two_loop_faces:
+                previous_active_face.select = True
+                bpy.ops.mesh.shortest_path_select(use_face_step=True)
+        elif previous_active_face.index in two_loop_faces and not previous_active_face.index == active_face.index: 
+            if active_face.index in two_loop_faces:
                 previous_active_face.select = True
                 bpy.ops.mesh.shortest_path_select(use_face_step=True)
         else:
