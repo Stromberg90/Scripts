@@ -107,21 +107,29 @@ class OBJECT_OT_context_select(bpy.types.Operator):
         active_vert = bm.select_history.active
         previous_active_vert = bm.select_history[len(bm.select_history) - 2]
 
+        select_vert(active_vert)
+
         neighbour_verts = get_neighbour_verts(bm)
 
         relevant_neighbour_verts = [
-            e for e in neighbour_verts if not e == active_vert.index]
+            v for v in neighbour_verts if not v == active_vert.index]
 
         select_vert(active_vert)
         if not previous_active_vert.index == active_vert.index:
             if previous_active_vert.index in relevant_neighbour_verts:
                 previous_active_vert.select = True
-                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
+                #Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
+                bm.select_flush_mode()
+                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
+                bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
+                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+                bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
         else:
             bm.select_history.add(active_vert)
 
         for component in selected_components:
             component.select = True
+            bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
 
         bmesh.update_edit_mesh(me)
 
