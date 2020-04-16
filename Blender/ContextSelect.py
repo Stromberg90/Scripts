@@ -160,8 +160,10 @@ class OBJECT_OT_context_select(bpy.types.Operator):
 
         select_face(active_face)
 
-        bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
-        bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+        #Must use ring=True because sometimes triangles touch against the active_face so loops won't complete.
+        bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=True)
+        #Must use Edge instead of Verts because if verts encompass a triangle it will select that face.
+        bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
         bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='FACE')
         two_loop_faces = [f.index for f in bm.faces if f.select]
 
