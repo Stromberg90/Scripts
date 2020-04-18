@@ -23,11 +23,11 @@ import bmesh
 bl_info = {
     "name": "Context Select",
     "category": "User",
-    "author": "Andreas Strømberg",
+    "author": "Andreas Strømberg / MightyBOBcnc",
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 1, 0)
+    "version": (1, 2, 0)
 }
 
 
@@ -118,18 +118,18 @@ class OBJECT_OT_context_select(bpy.types.Operator):
         if not previous_active_vert.index == active_vert.index:
             if previous_active_vert.index in relevant_neighbour_verts:
                 previous_active_vert.select = True
-                #Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
+                # Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
                 bm.select_flush_mode()
                 bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
                 bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
                 bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
-                bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
+                bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
         else:
             bm.select_history.add(active_vert)
 
         for component in selected_components:
             component.select = True
-            bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
+            bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
 
         bmesh.update_edit_mesh(me)
 
@@ -160,9 +160,9 @@ class OBJECT_OT_context_select(bpy.types.Operator):
 
         select_face(active_face)
 
-        #Must use ring=True because sometimes triangles touch against the active_face so loops won't complete.
+        # Must use ring=True because sometimes triangles touch against the active_face so loops won't complete.
         bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=True)
-        #Must use Edge instead of Verts because if verts encompass a triangle it will select that face.
+        # Must use Edge instead of Verts because if verts encompass a triangle it will select that face.
         bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
         bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='FACE')
         two_loop_faces = [f.index for f in bm.faces if f.select]
