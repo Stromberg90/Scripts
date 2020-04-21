@@ -302,14 +302,12 @@ def select_face(active_face):
     bpy.ops.mesh.select_all(action='DESELECT')
     active_face.select = True
 
-def get_boundary_edge_loop(edge, max_edges=1000):
-    i=0
-    if edge.is_boundary:
-        first_edge = edge
-        cur_edge = edge
+def get_boundary_edge_loop(active_edge):
+    first_edge = active_edge
+    cur_edge = active_edge
     final_selection = []
 
-    while i < max_edges:
+    while True:
         final_selection.append(cur_edge)
         edge_verts = cur_edge.verts
         new_edges = []
@@ -322,7 +320,6 @@ def get_boundary_edge_loop(edge, max_edges=1000):
             break
         else:
             cur_edge = new_edges[0]
-            i+=1
     return final_selection
 
 def register():
