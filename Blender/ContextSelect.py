@@ -27,7 +27,7 @@ bl_info = {
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 3, 0)
+    "version": (1, 4, 0)
 }
 
 
@@ -121,9 +121,19 @@ class OBJECT_OT_context_select(bpy.types.Operator):
                 # Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
                 bm.select_flush_mode()
                 bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
-                bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
-                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
-                bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
+                
+                active_edge = [e for e in bm.edges if e.select][0]
+            
+                if active_edge.is_boundary:
+                    boundary_edges = get_boundary_edge_loop(active_edge)
+                    for e in boundary_edges:
+                        e.select = True
+                    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+                    bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
+                else:
+                    bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
+                    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+                    bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
         else:
             bm.select_history.add(active_vert)
 
