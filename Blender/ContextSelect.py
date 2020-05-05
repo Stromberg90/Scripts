@@ -27,7 +27,7 @@ bl_info = {
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 4, 0)
+    "version": (1, 4, 1)
 }
 
 
@@ -66,11 +66,11 @@ class OBJECT_OT_context_select(bpy.types.Operator):
         return context.active_object is not None
 
     def execute(self, context):
-        self.addon_prefs = context.preferences.addons[__name__].preferences
+        prefs = context.preferences.addons[__name__].preferences
         if context.object.mode == ObjectMode.EDIT:
             # Checks if we are in vertex selection mode.
             if context.tool_settings.mesh_select_mode[0]:
-                self.maya_vert_select(context)
+                return maya_vert_select(context)
 
             # Checks if we are in edge selection mode.
             if context.tool_settings.mesh_select_mode[1]:
@@ -83,201 +83,204 @@ class OBJECT_OT_context_select(bpy.types.Operator):
                 context.tool_settings.mesh_select_mode = (False, True, False)
 
                 if len(selected_edges) > 0:
-                    self.maya_edge_select(context)
+                    return maya_edge_select(context)
 
             # Checks if we are in face selection mode.
             if context.tool_settings.mesh_select_mode[2]:
                 if context.area.type == 'VIEW_3D':
-                    self.maya_face_select(context)
+                    return maya_face_select(context, prefs)
                 elif context.area.type == 'IMAGE_EDITOR':
                     bpy.ops.uv.select_linked_pick(extend=False)
 
         return {'FINISHED'}
 
-    def maya_vert_select(self, context):
-        me = context.object.data
-        bm = bmesh.from_edit_mesh(me)
+def maya_vert_select(context):
+    me = context.object.data
+    bm = bmesh.from_edit_mesh(me)
 
-        if len(bm.select_history) == 0:
-            return
+    if len(bm.select_history) == 0:
+        return {'CANCELLED'}
 
-        selected_components = [e for e in bm.edges if e.select] + [f for f in bm.faces if f.select] + [v for v in bm.verts
-                                                                                                       if v.select]
+    selected_components = [e for e in bm.edges if e.select] + [f for f in bm.faces if f.select] + [v for v in bm.verts
+                                                                                                   if v.select]
 
-        active_vert = bm.select_history.active
-        previous_active_vert = bm.select_history[len(bm.select_history) - 2]
+    active_vert = bm.select_history.active
+    previous_active_vert = bm.select_history[len(bm.select_history) - 2]
 
-        select_vert(active_vert)
+    select_vert(active_vert)
 
-        neighbour_verts = get_neighbour_verts(bm)
+    neighbour_verts = get_neighbour_verts(bm)
 
-        relevant_neighbour_verts = [
-            v for v in neighbour_verts if not v == active_vert.index]
+    relevant_neighbour_verts = [
+        v for v in neighbour_verts if not v == active_vert.index]
 
-        select_vert(active_vert)
-        if not previous_active_vert.index == active_vert.index:
-            if previous_active_vert.index in relevant_neighbour_verts:
-                previous_active_vert.select = True
-                # Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
-                bm.select_flush_mode()
-                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
-                
-                active_edge = [e for e in bm.edges if e.select][0]
+    select_vert(active_vert)
+    if not previous_active_vert.index == active_vert.index:
+        if previous_active_vert.index in relevant_neighbour_verts:
+            previous_active_vert.select = True
+            # Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
+            bm.select_flush_mode()
+            bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
             
-                if active_edge.is_boundary:
-                    boundary_edges = get_boundary_edge_loop(active_edge)
-                    for e in boundary_edges:
-                        e.select = True
-                    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
-                    bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
-                else:
-                    bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
-                    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
-                    bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
-        else:
-            bm.select_history.add(active_vert)
-
-        for component in selected_components:
-            component.select = True
-            bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
-
-        bm.select_flush_mode()
-        bmesh.update_edit_mesh(me)
-
-    def maya_face_select(self, context):
-        me = context.object.data
-        bm = bmesh.from_edit_mesh(me)
-
-        if len(bm.select_history) == 0:
-            return
-
-        selected_components = [e for e in bm.edges if e.select] + [f for f in bm.faces if f.select] + [v for v in bm.verts
-                                                                                                       if v.select]
-
-        active_face = bm.select_history.active
-        previous_active_face = bm.select_history[len(bm.select_history) - 2]
-
-        select_face(active_face)
-
-        neighbour_faces = get_neighbour_faces(bm)
-
-        relevant_neighbour_faces = [
-            e for e in neighbour_faces if not e == active_face.index]
-
-        select_face(active_face)
-
-        bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
-        loop_faces = [f.index for f in bm.faces if f.select]
-
-        select_face(active_face)
-
-        # Must use ring=True because sometimes triangles touch against the active_face so loops won't complete.
-        bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=True)
-        # Must use Edge instead of Verts because if verts encompass a triangle it will select that face.
-        bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
-        bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='FACE')
-        two_loop_faces = [f.index for f in bm.faces if f.select]
-
-        select_face(active_face)
-
-        if previous_active_face.index in loop_faces and not previous_active_face.index == active_face.index:
-            if previous_active_face.index in relevant_neighbour_faces:
-                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
-            elif active_face.index in two_loop_faces:
-                previous_active_face.select = True
-                bpy.ops.mesh.shortest_path_select(use_face_step=True)
-        elif previous_active_face.index in two_loop_faces and not previous_active_face.index == active_face.index: 
-            if active_face.index in two_loop_faces:
-                previous_active_face.select = True
-                bpy.ops.mesh.shortest_path_select(use_face_step=True)
-        else:
-            if self.addon_prefs.select_linked_on_double_click:
-                bpy.ops.mesh.select_linked(delimit={'NORMAL'})
-
-        for component in selected_components:
-            component.select = True
-
-        bm.select_history.add(active_face)
-        bm.select_flush_mode()
-        bmesh.update_edit_mesh(me)
-
-    def maya_edge_select(self, context):
-        me = context.object.data
-        bm = bmesh.from_edit_mesh(me)
-
-        if len(bm.select_history) == 0:
-            return
-
-        selected_components = {e for e in bm.edges if e.select} | {f for f in bm.faces if f.select} | {v for v in bm.verts
-                                                                                                       if v.select}
-
-        active_edge = bm.select_history.active
-        previous_active_edge = bm.select_history[len(bm.select_history) - 2]
-
-        select_edge(active_edge)
-        bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
-        ring_edges = {e.index for e in bm.edges if e.select}
-
-        select_edge(active_edge)
-
-        if not previous_active_edge.index == active_edge.index:
-            if previous_active_edge.index in ring_edges:
-                neighbour_edges = get_neighbour_edges(bm)
-
-                relevant_neighbour_edges = {
-                    e for e in neighbour_edges if e in ring_edges and not e == active_edge.index}
-
-                select_edge(active_edge)
-                if previous_active_edge.index in relevant_neighbour_edges:
-                    bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
-                else:
-                    previous_active_edge.select = True
-                    bpy.ops.mesh.shortest_path_select(use_face_step=True)
-
-                bm.select_history.clear()
-
-            else:
-                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
-
-                loop_edges = {e.index for e in bm.edges if e.select}
-
-                if previous_active_edge.index in loop_edges:
-                    select_edge(active_edge)
-
-                    neighbour_edges = get_neighbour_edges(bm)
-
-                    relevant_neighbour_edges = {e for e in neighbour_edges if
-                                                e in loop_edges and not e == active_edge.index}
-
-                    select_edge(active_edge)
-                    if previous_active_edge.index in relevant_neighbour_edges:
-                        bpy.ops.mesh.edgering_select(
-                            'INVOKE_DEFAULT', ring=False)
-                    else:
-                        previous_active_edge.select = True
-                        bpy.ops.mesh.shortest_path_select()
-                        
-                elif active_edge.is_boundary:
-                    boundary_edges = get_boundary_edge_loop(active_edge)
-                    for e in boundary_edges:
-                        e.select = True
-
-                    bm.select_history.clear()
-        else:
+            active_edge = [e for e in bm.edges if e.select][0]
+        
             if active_edge.is_boundary:
                 boundary_edges = get_boundary_edge_loop(active_edge)
                 for e in boundary_edges:
                     e.select = True
+                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
             else:
-                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
+                bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
+                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+    else:
+        bm.select_history.add(active_vert)
+
+    for component in selected_components:
+        component.select = True
+
+    bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
+    bm.select_flush_mode()
+    bmesh.update_edit_mesh(me)
+    return {'FINISHED'}
+
+def maya_face_select(context, prefs):
+    me = context.object.data
+    bm = bmesh.from_edit_mesh(me)
+
+    if len(bm.select_history) == 0:
+        return {'CANCELLED'}
+
+    selected_components = [e for e in bm.edges if e.select] + [f for f in bm.faces if f.select] + [v for v in bm.verts
+                                                                                                   if v.select]
+
+    active_face = bm.select_history.active
+    previous_active_face = bm.select_history[len(bm.select_history) - 2]
+
+    select_face(active_face)
+
+    neighbour_faces = get_neighbour_faces(bm)
+
+    relevant_neighbour_faces = [
+        e for e in neighbour_faces if not e == active_face.index]
+
+    select_face(active_face)
+
+    bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
+    loop_faces = [f.index for f in bm.faces if f.select]
+
+    select_face(active_face)
+
+    # Must use ring=True because sometimes triangles touch against the active_face so loops won't complete.
+    bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=True)
+    # Must use Edge instead of Verts because if verts encompass a triangle it will select that face.
+    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
+    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='FACE')
+    two_loop_faces = [f.index for f in bm.faces if f.select]
+
+    select_face(active_face)
+
+    if previous_active_face.index in loop_faces and not previous_active_face.index == active_face.index:
+        if previous_active_face.index in relevant_neighbour_faces:
+            bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
+        elif active_face.index in two_loop_faces:
+            previous_active_face.select = True
+            # Using topology distance seems to catch more cases which makes this slightly better?
+            bpy.ops.mesh.shortest_path_select(use_face_step=False, use_topology_distance=True)
+    elif previous_active_face.index in two_loop_faces and not previous_active_face.index == active_face.index: 
+        if active_face.index in two_loop_faces:
+            previous_active_face.select = True
+            # Using topology distance seems to catch more cases which makes this slightly better?
+            bpy.ops.mesh.shortest_path_select(use_face_step=False, use_topology_distance=True)
+    else:
+        if prefs.select_linked_on_double_click:
+            bpy.ops.mesh.select_linked(delimit={'NORMAL'})
+
+    for component in selected_components:
+        component.select = True
+
+    bm.select_history.add(active_face)
+    bm.select_flush_mode()
+    bmesh.update_edit_mesh(me)
+    return {'FINISHED'}
+
+def maya_edge_select(context):
+    me = context.object.data
+    bm = bmesh.from_edit_mesh(me)
+
+    if len(bm.select_history) == 0:
+        return {'CANCELLED'}
+
+    selected_components = {e for e in bm.edges if e.select} | {f for f in bm.faces if f.select} | {v for v in bm.verts
+                                                                                                   if v.select}
+
+    active_edge = bm.select_history.active
+    previous_active_edge = bm.select_history[len(bm.select_history) - 2]
+
+    select_edge(active_edge)
+    bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
+    ring_edges = {e.index for e in bm.edges if e.select}
+
+    select_edge(active_edge)
+
+    if not previous_active_edge.index == active_edge.index:
+        if previous_active_edge.index in ring_edges:
+            neighbour_edges = get_neighbour_edges(bm)
+
+            relevant_neighbour_edges = {
+                e for e in neighbour_edges if e in ring_edges and not e == active_edge.index}
+
+            select_edge(active_edge)
+            if previous_active_edge.index in relevant_neighbour_edges:
+                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=True)
+            else:
+                previous_active_edge.select = True
+                bpy.ops.mesh.shortest_path_select(use_face_step=True)
+
+            bm.select_history.clear()
+
+        else:
+            bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
+
+            loop_edges = {e.index for e in bm.edges if e.select}
+
+            if previous_active_edge.index in loop_edges:
+                select_edge(active_edge)
+
+                neighbour_edges = get_neighbour_edges(bm)
+
+                relevant_neighbour_edges = {e for e in neighbour_edges if
+                                            e in loop_edges and not e == active_edge.index}
+
+                select_edge(active_edge)
+                if previous_active_edge.index in relevant_neighbour_edges:
+                    bpy.ops.mesh.edgering_select(
+                        'INVOKE_DEFAULT', ring=False)
+                else:
+                    previous_active_edge.select = True
+                    bpy.ops.mesh.shortest_path_select()
+                    
+            elif active_edge.is_boundary:
+                boundary_edges = get_boundary_edge_loop(active_edge)
+                for e in boundary_edges:
+                    e.select = True
+
                 bm.select_history.clear()
+    else:
+        if active_edge.is_boundary:
+            boundary_edges = get_boundary_edge_loop(active_edge)
+            for e in boundary_edges:
+                e.select = True
+        else:
+            bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
+            bm.select_history.clear()
 
-        for component in selected_components:
-            component.select = True
+    for component in selected_components:
+        component.select = True
 
-        bm.select_history.add(active_edge)
-        bm.select_flush_mode()
-        bmesh.update_edit_mesh(me)
+    bm.select_history.add(active_edge)
+    bm.select_flush_mode()
+    bmesh.update_edit_mesh(me)
+    return {'FINISHED'}
 
 
 def get_neighbour_verts(bm):
