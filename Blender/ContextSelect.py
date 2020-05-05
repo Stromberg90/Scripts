@@ -23,11 +23,11 @@ import bmesh
 bl_info = {
     "name": "Context Select",
     "category": "User",
-    "author": "Andreas Strømberg / MightyBOBcnc",
+    "author": "Andreas Strømberg / Chris Kohl",
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 2, 0)
+    "version": (1, 4, 0)
 }
 
 
@@ -121,9 +121,19 @@ class OBJECT_OT_context_select(bpy.types.Operator):
                 # Without flushing the next operator won't recognize that there's anything to convert from vert to edge?
                 bm.select_flush_mode()
                 bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='EDGE')
-                bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
-                bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
-                bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
+                
+                active_edge = [e for e in bm.edges if e.select][0]
+            
+                if active_edge.is_boundary:
+                    boundary_edges = get_boundary_edge_loop(active_edge)
+                    for e in boundary_edges:
+                        e.select = True
+                    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+                    bm.select_history.add(active_vert) #Re-add active_vert to history to keep it active.
+                else:
+                    bpy.ops.mesh.loop_multi_select('INVOKE_DEFAULT', ring=False)
+                    bpy.ops.mesh.select_mode('INVOKE_DEFAULT', use_extend=False, use_expand=False, type='VERT')
+                    bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
         else:
             bm.select_history.add(active_vert)
 
@@ -131,6 +141,7 @@ class OBJECT_OT_context_select(bpy.types.Operator):
             component.select = True
             bm.select_history.add(active_vert) # Re-add active_vert to history to keep it active.
 
+        bm.select_flush_mode()
         bmesh.update_edit_mesh(me)
 
     def maya_face_select(self, context):
@@ -187,6 +198,7 @@ class OBJECT_OT_context_select(bpy.types.Operator):
             component.select = True
 
         bm.select_history.add(active_face)
+        bm.select_flush_mode()
         bmesh.update_edit_mesh(me)
 
     def maya_edge_select(self, context):
@@ -244,16 +256,27 @@ class OBJECT_OT_context_select(bpy.types.Operator):
                     else:
                         previous_active_edge.select = True
                         bpy.ops.mesh.shortest_path_select()
+                        
+                elif active_edge.is_boundary:
+                    boundary_edges = get_boundary_edge_loop(active_edge)
+                    for e in boundary_edges:
+                        e.select = True
 
                     bm.select_history.clear()
         else:
-            bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
-            bm.select_history.clear()
+            if active_edge.is_boundary:
+                boundary_edges = get_boundary_edge_loop(active_edge)
+                for e in boundary_edges:
+                    e.select = True
+            else:
+                bpy.ops.mesh.edgering_select('INVOKE_DEFAULT', ring=False)
+                bm.select_history.clear()
 
         for component in selected_components:
             component.select = True
 
         bm.select_history.add(active_edge)
+        bm.select_flush_mode()
         bmesh.update_edit_mesh(me)
 
 
@@ -289,6 +312,25 @@ def select_face(active_face):
     bpy.ops.mesh.select_all(action='DESELECT')
     active_face.select = True
 
+def get_boundary_edge_loop(active_edge):
+    first_edge = active_edge
+    cur_edge = active_edge
+    final_selection = []
+
+    while True:
+        final_selection.append(cur_edge)
+        edge_verts = cur_edge.verts
+        new_edges = []
+
+        # From vertices in the current edge get connected edges if they're boundary.
+        new_edges = [e for v in edge_verts for e in v.link_edges[:] \
+        if e.is_boundary and e != cur_edge and not e in final_selection]
+        
+        if len(new_edges) == 0 or new_edges[0] == first_edge:
+            break
+        else:
+            cur_edge = new_edges[0]
+    return final_selection
 
 def register():
     bpy.utils.register_class(ContextSelectPreferences)
