@@ -25,7 +25,7 @@ bl_info = {
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 0)
+    "version": (1, 0, 1)
 }
 
 import bpy
@@ -105,7 +105,7 @@ class ModalEdgeToCurve(bpy.types.Operator):
         self.value = 0.0
         self.start_value = event.mouse_x
         self.resolution = 2
-        self.original_object = bpy.context.selected_objects[0]
+        self.original_object = bpy.context.active_object
         if context.active_object.type == 'CURVE':
             context.object.data.fill_mode = 'FULL'
             context.object.data.bevel_resolution = self.resolution
