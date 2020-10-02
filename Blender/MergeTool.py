@@ -151,7 +151,7 @@ class MergeTool(bpy.types.Operator):
     def invoke(self, context, event):
         if context.space_data.type == 'VIEW_3D':
             context.workspace.status_text_set(
-                "Left click drag to merge vertices, Esc to cancel")
+                "Left click drag to merge vertices, Esc or right click to cancel")
 
             self.start_vertex = None
             self.end_vertex = None
