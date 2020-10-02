@@ -113,18 +113,22 @@ class MergeTool(bpy.types.Operator):
                         self.start_vertex = selected_vertex
                         self.start_vertex_transformed = self.world_matrix @ self.start_vertex.co
                     else:
-                        bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                        bpy.types.SpaceView3D.draw_handler_remove(
+                            self._handle, 'WINDOW')
                         return {'CANCELLED'}
                     self.started = True
             elif self.start_vertex is self.end_vertex:
-                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                bpy.types.SpaceView3D.draw_handler_remove(
+                    self._handle, 'WINDOW')
+                context.workspace.status_text_set(None)
                 return {'CANCELLED'}
             elif self.start_vertex is not None and self.end_vertex is not None:
                 self.start_vertex.select = True
                 self.end_vertex.select = True
                 try:
                     bpy.ops.mesh.merge(type='LAST')
-                    bpy.ops.ed.undo_push(message="Add an undo step *function may be moved*")
+                    bpy.ops.ed.undo_push(
+                        message="Add an undo step *function may be moved*")
                 except TypeError:
                     pass
                 finally:
@@ -132,17 +136,23 @@ class MergeTool(bpy.types.Operator):
                     self.end_vertex = None
                     self.started = False
             else:
-                bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+                bpy.types.SpaceView3D.draw_handler_remove(
+                    self._handle, 'WINDOW')
+                context.workspace.status_text_set(None)
                 return {'CANCELLED'}
             return {'RUNNING_MODAL'}
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            context.workspace.status_text_set(None)
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
         if context.space_data.type == 'VIEW_3D':
+            context.workspace.status_text_set(
+                "Left click drag to merge vertices, Esc to cancel")
+
             self.start_vertex = None
             self.end_vertex = None
             self.started = False
@@ -151,7 +161,8 @@ class MergeTool(bpy.types.Operator):
             self.bm = bmesh.from_edit_mesh(self.me)
 
             args = (self, context)
-            self._handle = bpy.types.SpaceView3D.draw_handler_add(draw_callback_px, args, 'WINDOW', 'POST_VIEW')
+            self._handle = bpy.types.SpaceView3D.draw_handler_add(
+                draw_callback_px, args, 'WINDOW', 'POST_VIEW')
 
             context.window_manager.modal_handler_add(self)
 
