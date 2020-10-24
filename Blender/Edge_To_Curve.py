@@ -21,11 +21,11 @@ bl_info = {
     "name": "Edges To Curve",
     "category": "Object",
     "description": "Converts selected edges into curve with extrusion",
-    "author": "Andreas Strømberg",
+    "author": "Andreas Strømberg, Chris Kohl",
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 0, 1)
+    "version": (1, 0, 2)
 }
 
 import bpy
@@ -60,6 +60,7 @@ class EventType:
 class ModalEdgeToCurve(bpy.types.Operator):
     bl_idname = "object.edge_to_curve"
     bl_label = "Edges To Curve"
+    bl_description = "Takes selected mesh edges and converts them into a curve."
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
@@ -134,13 +135,19 @@ class ModalEdgeToCurve(bpy.types.Operator):
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
 
+def EdgeToCurveMenuItem(self, context):
+    layout = self.layout
+    layout.separator()
+    layout.operator("object.edge_to_curve", text="Edges to Curve")
 
 def register():
     bpy.utils.register_class(ModalEdgeToCurve)
+    bpy.types.VIEW3D_MT_edit_mesh_edges.append(EdgeToCurveMenuItem)
 
 
 def unregister():
     bpy.utils.unregister_class(ModalEdgeToCurve)
+    bpy.types.VIEW3D_MT_edit_mesh_edges.remove(EdgeToCurveMenuItem)
 
 
 if __name__ == "__main__":
