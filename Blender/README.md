@@ -14,7 +14,8 @@ Usage: Hotkey object.context_select to double-click and shift double-click, or w
 ### Edges To Curve
 ![](http://i.imgur.com/u2tHwLL.gif)
 
-Usage: Select edge(s) then search for Edges To Curve in the spacebar menu or hotkey object.edge_to_curve
+Usage: Select edge(s) then search for Edges To Curve in the spacebar menu, or the Edges menu in the top of the viewport, or the Context menu, or hotkey object.edge_to_curve  
+Left Mouse confirms, Right Mouse cancels, Mouse Wheel increases or decreases resolution.
 
 ### Duplicate Along Curve
 ![](http://i.imgur.com/8kERwFF.gif)
