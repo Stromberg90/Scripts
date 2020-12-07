@@ -19,13 +19,14 @@
 
 bl_info = {
     "name": "Edges To Curve",
-    "category": "Object",
+    "category": "Mesh",
+    "location": "View3D > Edge menu or Context menu",
     "description": "Converts selected edges into curve with extrusion",
     "author": "Andreas Strømberg, Chris Kohl",
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
     "tracker_url": "https://github.com/Stromberg90/Scripts/issues",
     "blender": (2, 80, 0),
-    "version": (1, 0, 2)
+    "version": (1, 0, 3)
 }
 
 import bpy
@@ -138,16 +139,19 @@ class ModalEdgeToCurve(bpy.types.Operator):
 def EdgeToCurveMenuItem(self, context):
     layout = self.layout
     layout.separator()
+    layout.operator_context = 'INVOKE_DEFAULT'
     layout.operator("object.edge_to_curve", text="Edges to Curve")
 
 def register():
     bpy.utils.register_class(ModalEdgeToCurve)
     bpy.types.VIEW3D_MT_edit_mesh_edges.append(EdgeToCurveMenuItem)
+    bpy.types.VIEW3D_MT_edit_mesh_context_menu.append(EdgeToCurveMenuItem)
 
 
 def unregister():
     bpy.utils.unregister_class(ModalEdgeToCurve)
     bpy.types.VIEW3D_MT_edit_mesh_edges.remove(EdgeToCurveMenuItem)
+    bpy.types.VIEW3D_MT_edit_mesh_context_menu.remove(EdgeToCurveMenuItem)
 
 
 if __name__ == "__main__":
