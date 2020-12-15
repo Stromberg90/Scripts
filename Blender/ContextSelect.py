@@ -60,7 +60,7 @@ def cs_unregister_keymap_keys():
     mouse_keymap.clear()
 
 
-def cs_update_keymap(self, context):
+def cs_update_keymap_keys(self, context):
     prefs = context.preferences.addons[__name__].preferences
     
     if prefs.add_keys_to_keymap:
@@ -78,7 +78,7 @@ class ContextSelectPreferences(bpy.types.AddonPreferences):
         name="Add Keys to Key Map",
         description="Automatically append the add-on's keys to Blender's key map.",
         default=True,
-        update=cs_update_keymap)
+        update=cs_update_keymap_keys)
 
     select_linked_on_double_click: bpy.props.BoolProperty(
         name="Select Linked On Double Click",
