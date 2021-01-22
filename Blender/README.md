@@ -1,7 +1,7 @@
 # Blender
 
 ## Maya Style Merge Tool
-![](https://i.imgur.com/aTZDOdp.gif)
+![](https://i.imgur.com/EQ0rLzV.gif)
 
 Usage: Install the mesh_merge_tool.zip and then in Edit mode use the new tool that appears in the left-side Toolbar.  You can right click on the tool icon to set a hotkey for switching to the tool.
 
