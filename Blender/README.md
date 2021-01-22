@@ -1,11 +1,23 @@
 # Blender
 
-### Maya Style Merge Tool
-![](https://i.imgur.com/aTZDOdp.gif)
+## Maya Style Merge Tool
+![](https://i.imgur.com/EQ0rLzV.gif)
 
-Usage: Search for Merge Tool in the spacebar menu or hotkey object.merge_tool
+Usage: Install the mesh_merge_tool.zip and then in Edit mode use the new tool that appears in the left-side Toolbar.  You can right click on the tool icon to set a hotkey for switching to the tool.
 
-### Context Select (Emulates Maya's selections)
+![](https://i.imgur.com/EuHTXth.png)
+
+You can also choose to hotkey mesh.merge_tool in the Blender Preferences > Keymap > 3D View > Mesh > Mesh (Global) if you wish to call the operator directly instead of using the tool (NOTE: It is recommended that if you choose to do this then you should enable the "Wait for Input" checkbox when setting up your hotkey.
+
+Click and hold the left mouse button on a vertex or edge and then drag it onto a second vertex or edge and release the mouse button to merge them.  You can control whether to merge at the first or last vertex/edge, or the center between the two, via a dropdown in the Tool Settings bar at the top of the 3D Viewport, OR you can press the 1, 2, 3, A, C, F, or L key while dragging to change the merge location on the fly before you release the mouse button.
+- 1, A, or F will merge at the First component.
+- 2 or C will merge at the Center between the two.
+- 3 or L will merge at the Last component.
+
+Line and point size and colors can be controlled from the add-on preferences.
+![](https://i.imgur.com/GpsqXue.png)
+
+## Context Select (Emulates Maya's selections)
 ![](https://i.imgur.com/FwF4o0r.gif)
 
 ![](https://i.imgur.com/bpaMJWL.png)
@@ -22,13 +34,13 @@ LIMITATIONS:
 - At this time the add-on can only create or add to a selection; it cannot subtract from a selection (full loop or bounded deselection).  
 - The add-on has not been tested in the UV viewport, only in the 3D viewport, so it may not work there.
 
-### Edges To Curve
+## Edges To Curve
 ![](https://i.imgur.com/u2tHwLL.gif)
 
 Usage: Select edge(s) then search for Edges To Curve in the spacebar menu, or the Edges menu in the top of the viewport, or the Context menu, or hotkey object.edge_to_curve  
 Left Mouse confirms, Right Mouse cancels, Mouse Wheel increases or decreases resolution.
 
-### Duplicate Along Curve
+## Duplicate Along Curve
 ![](https://i.imgur.com/8kERwFF.gif)
 
 Usage: Select one curve and one object, then search for Duplicate Along Curve in the spacebar menu or hotkey object.duplicate_along_curve
