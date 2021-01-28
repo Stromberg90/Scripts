@@ -14,8 +14,12 @@ Click and hold the left mouse button on a vertex or edge and then drag it onto a
 - 2 or C will merge at the Center between the two.
 - 3 or L will merge at the Last component.
 
-Line and point size and colors can be controlled from the add-on preferences.
-![](https://i.imgur.com/GpsqXue.png)
+In vertex mode, if there is a starting selection and the tool is invoked on one if those vertices, then all vertices in the selection will be merged at the desired location.
+
+![](https://i.imgur.com/4SySLU5.gif)
+
+Multi-merge, line and point size, and colors can be controlled from the add-on preferences.
+![](https://i.imgur.com/hIgc9ly.png)
 
 ## Context Select (Emulates Maya's selections)
 ![](https://i.imgur.com/FwF4o0r.gif)
