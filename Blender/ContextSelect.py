@@ -20,7 +20,7 @@ bl_info = {
     "name": "Context Select",
     "description": "Context-aware loop selection for vertices, edges, and faces.",
     "author": "Andreas Strømberg, Chris Kohl",
-    "version": (1, 6, 0),
+    "version": (1, 6, 1),
     "blender": (2, 80, 0),
     "location": "",
     "warning": "",
@@ -60,7 +60,7 @@ def cs_unregister_keymap_keys():
     mouse_keymap.clear()
 
 
-def cs_update_keymap_keys(self, context):
+def cs_update_keymap(self, context):
     prefs = context.preferences.addons[__name__].preferences
     
     if prefs.add_keys_to_keymap:
@@ -78,7 +78,7 @@ class ContextSelectPreferences(bpy.types.AddonPreferences):
         name="Add Keys to Key Map",
         description="Automatically append the add-on's keys to Blender's key map.",
         default=True,
-        update=cs_update_keymap_keys)
+        update=cs_update_keymap)
 
     select_linked_on_double_click: bpy.props.BoolProperty(
         name="Select Linked On Double Click",
@@ -675,9 +675,10 @@ def bounded_loop_vert_manifold(prefs, starting_vert, ends):
             if "infinite" in partial_list:
                 partial_list.discard("infinite")
                 opposite_edge = get_opposite_edge(loop_edge, starting_vert)
-                for l in opposite_edge.link_loops:
-                    if l in candidate_dirs:
-                        candidate_dirs[candidate_dirs.index(l)] = "skip"
+                if opposite_edge is not None:
+                    for l in opposite_edge.link_loops:
+                        if l in candidate_dirs:
+                            candidate_dirs[candidate_dirs.index(l)] = "skip"
             if ends[0] in partial_list and ends[1] in partial_list:
                 connected_loops.append(partial_list)
     return connected_loops
@@ -825,7 +826,10 @@ def full_loop_vert_manifold(prefs, starting_vert, starting_edge):
         if len(starting_vert.link_loops) != 4:  # Checking if both verts are unusable.
             return None
     opposite_edge = get_opposite_edge(starting_edge, starting_vert)
-    loops = [starting_edge.link_loops[0], opposite_edge.link_loops[0]]
+    if opposite_edge is not None:
+        loops = [starting_edge.link_loops[0], opposite_edge.link_loops[0]]
+    else:
+        loops = [starting_edge.link_loops[0]]
     vert_list = set()
     reference_list = set()
 
@@ -920,7 +924,10 @@ def full_loop_edge_manifold(edge):
     else:
         return []
     opposite_edge = get_opposite_edge(edge, starting_vert)
-    loops = [edge.link_loops[0], opposite_edge.link_loops[0]]
+    if opposite_edge is not None:
+        loops = [edge.link_loops[0], opposite_edge.link_loops[0]]
+    else:
+        loops = [edge.link_loops[0]]
 
     prefs = bpy.context.preferences.addons[__name__].preferences
     edge_list = set()
@@ -1522,8 +1529,11 @@ def get_opposite_edge(edge, vert):
     a_face = [f for f in faces if edge in f.edges][0]
     step_loop = [l for l in a_face.loops if l.edge in edges and l.edge != edge][0]
     opposite_loop = fan_loop_extension(edge, step_loop, vert)
-    opposite_edge = opposite_loop.edge
-    return opposite_edge
+    if opposite_loop is not None:
+        opposite_edge = opposite_loop.edge
+        return opposite_edge
+    else:
+        return None
 
 
 def register():
