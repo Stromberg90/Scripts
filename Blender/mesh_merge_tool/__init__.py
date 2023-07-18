@@ -20,8 +20,8 @@ bl_info = {
     "name": "Merge Tool",
     "description": "An interactive tool for merging vertices.",
     "author": "Andreas Strømberg, Chris Kohl",
-    "version": (1, 3, 0),
-    "blender": (2, 80, 0),
+    "version": (1, 3, 1),
+    "blender": (2, 93, 0),
     "location": "View3D > TOOLS > Merge Tool",
     "warning": "",
     "wiki_url": "https://github.com/Stromberg90/Scripts/tree/master/Blender",
@@ -31,7 +31,6 @@ bl_info = {
 
 
 import bpy
-import bgl
 import gpu
 import bmesh
 import os
@@ -48,10 +47,7 @@ from bpy.props import (
     )
 
 icon_dir = os.path.join(os.path.dirname(__file__), "icons")
-if bpy.app.version[1] < 81:  # 2.80 didn't have the PAINT_CROSS cursor
-    t_cursor = 'CROSSHAIR'
-else:
-    t_cursor = 'PAINT_CROSS'
+t_cursor = 'PAINT_CROSS'
 
 
 classes = []
@@ -250,11 +246,10 @@ class DrawLineDashed():
 
 def draw_callback_3d(self, context):
     if self.started and self.start_comp is not None:
-        bgl.glEnable(bgl.GL_BLEND)
-        bgl.glPointSize(self.prefs.point_size)
+        gpu.state.point_size_set(self.prefs.point_size)
         shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         if self.end_comp is not None and self.end_comp != self.start_comp:
-            bgl.glLineWidth(self.prefs.line_width)
+            gpu.state.line_width_set(self.prefs.line_width)
             if not self.multi_merge:
                 line_coords = [self.start_comp_transformed, self.end_comp_transformed]
             else:
@@ -294,7 +289,7 @@ def draw_callback_3d(self, context):
 
             # Ending edge
             if self.sel_mode == 'EDGE':
-                bgl.glLineWidth(self.prefs.edge_width)
+                gpu.state.line_width_set(self.prefs.edge_width)
                 e1v = [self.world_matrix @ v.co for v in self.end_comp.verts]
 
                 end_edge = DrawLine()
@@ -328,7 +323,7 @@ def draw_callback_3d(self, context):
 
         # Starting edge
         if self.sel_mode == 'EDGE':
-            bgl.glLineWidth(self.prefs.edge_width)
+            gpu.state.line_width_set(self.prefs.edge_width)
             e0v = [self.world_matrix @ v.co for v in self.start_comp.verts]
 
             start_edge = DrawLine()
@@ -344,20 +339,15 @@ def draw_callback_3d(self, context):
         else:
             start_point.add(shader, self.start_comp_transformed, self.prefs.start_color)
 
-        bgl.glLineWidth(1)
-        bgl.glPointSize(1)
-        bgl.glDisable(bgl.GL_BLEND)
+        gpu.state.line_width_set(1)
+        gpu.state.point_size_set(1)
 
 
 def draw_callback_2d(self, context):
-    bgl.glEnable(bgl.GL_BLEND)
-
     # Have to add 1 for some reason in order to get proper number of segments.
     # This could potentially also be a ratio with the radius.
     circ_segments = 8 + 1
-    draw_circle_2d(self.m_coord, self.prefs.circ_color, self.prefs.circ_radius, circ_segments)
-
-    bgl.glDisable(bgl.GL_BLEND)
+    draw_circle_2d(self.m_coord, self.prefs.circ_color, self.prefs.circ_radius, segments=circ_segments)
 
 
 def find_center(source):
@@ -529,7 +519,7 @@ class MergeTool(bpy.types.Operator):
                         self.bm.select_history.add(self.end_comp)
                         bpy.ops.mesh.merge(type=self.merge_location)
                     elif self.sel_mode == 'EDGE':
-                        # Two separate edges
+                        # Case of two fully separate edges
                         if not any([v for v in self.start_comp.verts if v in self.end_comp.verts]):
                             bridge = bmesh.ops.bridge_loops(self.bm, edges=(self.start_comp, self.end_comp))
                             new_e0 = bridge['edges'][0]
@@ -554,7 +544,7 @@ class MergeTool(bpy.types.Operator):
                                 sv1.co = ev1.co
                             bmesh.ops.weld_verts(self.bm, targetmap=merge_map)
                             bmesh.update_edit_mesh(self.me)
-                        # Edges share a vertex
+                        # Case where two edges share a vertex
                         else:
                             shared_vert = [v for v in self.start_comp.verts if v in self.end_comp.verts][0]
                             sv = [v for v in self.start_comp.verts if v is not shared_vert][0]  # Start vert
@@ -620,7 +610,7 @@ class MergeTool(bpy.types.Operator):
                 self.window.cursor_modal_set(t_cursor)
                 return {'RUNNING_MODAL'}
 
-            main(self, context, event)  #This goes up here or else there will be a hard crash
+            main(self, context, event)  # This goes up here or else there will be a hard crash
 
             if self.sel_mode == 'VERT' and context.object.data.total_vert_sel == 0:
                 self.finish(context)
