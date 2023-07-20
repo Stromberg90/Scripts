@@ -14,7 +14,7 @@ Click and hold the left mouse button on a vertex or edge and then drag it onto a
 - 2 or C will merge at the Center between the two.
 - 3 or L will merge at the Last component.
 
-In vertex mode, if there is a starting selection and the tool is invoked on one if those vertices, then all vertices in the selection will be merged at the desired location.
+In vertex mode, if there is a starting selection and the tool is invoked on one of those vertices, then all vertices in the selection will be merged at the desired location.
 
 ![](https://i.imgur.com/4SySLU5.gif)
 
