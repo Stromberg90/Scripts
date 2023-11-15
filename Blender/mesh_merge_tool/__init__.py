@@ -20,7 +20,7 @@ bl_info = {
     "name": "Merge Tool",
     "description": "An interactive tool for merging vertices.",
     "author": "Andreas Strømberg, Chris Kohl",
-    "version": (1, 3, 1),
+    "version": (1, 3, 2),
     "blender": (2, 93, 0),
     "location": "View3D > TOOLS > Merge Tool",
     "warning": "",
@@ -49,6 +49,14 @@ from bpy.props import (
 icon_dir = os.path.join(os.path.dirname(__file__), "icons")
 t_cursor = 'PAINT_CROSS'
 
+# Blender versions higher than 4.0 don't support 3D_UNIFORM_COLOR but versions below 3.4 require it
+if bpy.app.version[0] >= 4:
+    shader_type = 'UNIFORM_COLOR'
+elif bpy.app.version[0] == 3 and bpy.app.version[1] >= 4:
+        shader_type = 'UNIFORM_COLOR'
+else:
+    shader_type = '3D_UNIFORM_COLOR'
+    
 
 classes = []
 
@@ -247,7 +255,7 @@ class DrawLineDashed():
 def draw_callback_3d(self, context):
     if self.started and self.start_comp is not None:
         gpu.state.point_size_set(self.prefs.point_size)
-        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        shader = gpu.shader.from_builtin(shader_type)
         if self.end_comp is not None and self.end_comp != self.start_comp:
             gpu.state.line_width_set(self.prefs.line_width)
             if not self.multi_merge:
