@@ -214,10 +214,18 @@ class DrawLine():
         self.color = None
 
     def draw(self):
+        region = bpy.context.region
+        shader = gpu.shader.from_builtin('POLYLINE_UNIFORM_COLOR')
+
         batch = batch_for_shader(self.shader, 'LINES', {"pos": self.coords})
-        self.shader.bind()
-        self.shader.uniform_float("color", self.color)
-        batch.draw(self.shader)
+
+        shader.uniform_float("viewportSize", (region.width, region.height))
+        shader.uniform_float("color", self.color)
+        shader.uniform_float("lineWidth", 2.0)
+
+        gpu.state.blend_set("ALPHA")
+
+        batch.draw(shader)
 
     def add(self, shader, coords, color):
         self.shader = shader
