@@ -145,7 +145,6 @@ class MergeToolPreferences(bpy.types.AddonPreferences):
         nums.prop(self, "point_size")
         nums.prop(self, "edge_width")
         nums.prop(self, "line_width")
-#        nums.prop(self, "circ_radius")
 
         colors = layout.grid_flow(row_major=False, columns=0, even_columns=True, even_rows=False, align=False)
         colors.prop(self, "start_color")
