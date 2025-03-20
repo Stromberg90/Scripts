@@ -672,11 +672,10 @@ class WorkSpaceMergeTool(bpy.types.WorkSpaceTool):
         tool_props = tool.operator_properties("mesh.merge_tool")
         prefs = bpy.context.preferences.addons[__name__].preferences
 
-        row1 = layout.row()
-        row1.prop(tool_props, "merge_location")
-        row2 = layout.row()
-        row2.prop(prefs, "allow_multi")
-#        row.prop(tool_props, "wait_for_input")
+        col = layout.column()
+        col.prop(tool_props, "merge_location")
+        col.prop(prefs, "allow_multi")
+#        col.prop(tool_props, "wait_for_input")
 
 
 def register():
