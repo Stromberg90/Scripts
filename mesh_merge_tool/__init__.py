@@ -20,7 +20,7 @@ bl_info = {
     "name": "Merge Tool",
     "description": "An interactive tool for merging vertices and edges.",
     "author": "Andreas Strømberg, Chris Kohl",
-    "version": (1, 3, 3),
+    "version": (1, 4, 0),
     "blender": (2, 93, 0),
     "location": "View3D > TOOLS > Merge Tool",
     "warning": "",
@@ -672,9 +672,10 @@ class WorkSpaceMergeTool(bpy.types.WorkSpaceTool):
         tool_props = tool.operator_properties("mesh.merge_tool")
         prefs = bpy.context.preferences.addons[__name__].preferences
 
-        row = layout.row()
-        row.prop(tool_props, "merge_location")
-        row.prop(prefs, "allow_multi")
+        row1 = layout.row()
+        row1.prop(tool_props, "merge_location")
+        row2 = layout.row()
+        row2.prop(prefs, "allow_multi")
 #        row.prop(tool_props, "wait_for_input")
 
 
