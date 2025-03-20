@@ -18,9 +18,9 @@
 
 bl_info = {
     "name": "Merge Tool",
-    "description": "An interactive tool for merging vertices.",
+    "description": "An interactive tool for merging vertices and edges.",
     "author": "Andreas Strømberg, Chris Kohl",
-    "version": (1, 3, 2),
+    "version": (1, 3, 3),
     "blender": (2, 93, 0),
     "location": "View3D > TOOLS > Merge Tool",
     "warning": "",
@@ -56,7 +56,6 @@ elif bpy.app.version[0] == 3 and bpy.app.version[1] >= 4:
         shader_type = 'UNIFORM_COLOR'
 else:
     shader_type = '3D_UNIFORM_COLOR'
-    
 
 classes = []
 
@@ -66,7 +65,7 @@ class MergeToolPreferences(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     allow_multi: BoolProperty(name="Allow Multi-Merge",
-        description="In Vertex mode, if there is a starting selection, merge all those vertices together",
+        description="In Vertex mode only, if there is a starting selection, merge all those vertices together",
         default=True)
 
     show_circ: BoolProperty(name="Show Circle",
@@ -185,7 +184,8 @@ fragment_shader = '''
 
 
 class DrawPoint():
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.shader = None
         self.coords = None
         self.color = None
@@ -207,7 +207,8 @@ class DrawPoint():
 
 
 class DrawLine():
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.shader = None
         self.coords = None
         self.color = None
@@ -226,7 +227,8 @@ class DrawLine():
 
 
 class DrawLineDashed():
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.shader = None
         self.coords = None
         self.color = None
@@ -416,7 +418,7 @@ class MergeTool(bpy.types.Operator):
         description = "Merge location",
         items = [('FIRST', "First", "Components will be merged at the first component", 'TRIA_LEFT', 1),
                 ('LAST', "Last", "Components will be merged at the last component", 'TRIA_RIGHT', 2),
-                ('CENTER', "Center", "Components will be merged at the center between the two", 'TRIA_DOWN', 3)
+                ('CENTER', "Center", "Components will be merged at their center point", 'TRIA_DOWN', 3)
                 ],
         default = 'LAST'
     )
@@ -427,7 +429,8 @@ class MergeTool(bpy.types.Operator):
         default = False
     )
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.prefs = bpy.context.preferences.addons[__name__].preferences
         self.window = bpy.context.window_manager.windows[0]
         self.m_coord = None
@@ -656,7 +659,7 @@ class WorkSpaceMergeTool(bpy.types.WorkSpaceTool):
 
     bl_idname = "edit_mesh.merge_tool"
     bl_label = "Merge Tool"
-    bl_description = "Interactively merge vertices with the Merge Tool"
+    bl_description = "Interactively merge vertices or edges"
     bl_icon = os.path.join(icon_dir, "ops.mesh.merge_tool")
     bl_cursor = t_cursor
     bl_widget = None
