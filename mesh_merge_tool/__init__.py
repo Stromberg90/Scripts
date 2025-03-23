@@ -68,6 +68,10 @@ class MergeToolPreferences(bpy.types.AddonPreferences):
         description="In Vertex mode only, if there is a starting selection, merge all those vertices together",
         default=True)
 
+    fix_uvs: BoolProperty(name="Fix UVs",
+        description="Correct UVs to match the merge",
+        default=True)
+
     show_circ: BoolProperty(name="Show Circle",
         description="Show the circle cursor",
         default=True)
@@ -137,6 +141,7 @@ class MergeToolPreferences(bpy.types.AddonPreferences):
 
         layout.prop(self, "allow_multi")
         layout.prop(self, "show_circ")
+        layout.prop(self, "fix_uvs")
 
         layout.use_property_split = True
         nums = layout.grid_flow(row_major=False, columns=0, even_columns=True, even_rows=False, align=False)
@@ -483,8 +488,9 @@ class MergeTool(bpy.types.Operator):
     def modal(self, context, event):
         context.area.tag_redraw()
 
+
         if event.alt or event.type in {'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
-            # Allow navigation (event.alt allows for using Industry Compatible keymap navigation)
+            # Allow navigation when invoked from keybind instead of mouse
             return {'PASS_THROUGH'}
         elif event.type in {'ONE', 'A', 'F'} and event.value == 'PRESS':
             self.merge_location = 'FIRST'
@@ -527,7 +533,7 @@ class MergeTool(bpy.types.Operator):
                         self.end_comp.select = True
                         self.bm.select_history.add(self.start_comp)
                         self.bm.select_history.add(self.end_comp)
-                        bpy.ops.mesh.merge(type=self.merge_location)
+                        bpy.ops.mesh.merge(type=self.merge_location, uvs=self.prefs.fix_uvs)
                     elif self.sel_mode == 'EDGE':
                         # Case of two fully separate edges
                         if not any([v for v in self.start_comp.verts if v in self.end_comp.verts]):
@@ -546,12 +552,21 @@ class MergeTool(bpy.types.Operator):
                             if self.merge_location == 'FIRST':  # Move end verts to start vert locations
                                 ev0.co = sv0.co
                                 ev1.co = sv1.co
+                                if self.prefs.fix_uvs:
+                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv0, ev0], vert_snap=sv0)
+                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv1, ev1], vert_snap=sv1)
                             elif self.merge_location == 'CENTER':  # Move end verts to centers
                                 ev0.co = find_center(new_e0)
                                 ev1.co = find_center(new_e1)
+                                if self.prefs.fix_uvs:
+                                    bmesh.ops.average_vert_facedata(self.bm, verts=[sv0, ev0])
+                                    bmesh.ops.average_vert_facedata(self.bm, verts=[sv1, ev1])
                             elif self.merge_location == 'LAST':  # Moving not required but doing this for consistency
                                 sv0.co = ev0.co
                                 sv1.co = ev1.co
+                                if self.prefs.fix_uvs:
+                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv0, ev0], vert_snap=ev0)
+                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv1, ev1], vert_snap=ev1)
                             bmesh.ops.weld_verts(self.bm, targetmap=merge_map)
                             bmesh.update_edit_mesh(self.me)
                         # Case where two edges share a vertex
@@ -562,12 +577,18 @@ class MergeTool(bpy.types.Operator):
                             merge_map = {}
                             merge_map[sv] = ev
                             # bmesh weld_verts always moves verts to target so we must manually set desired vert.co
-                            if self.merge_location == 'FIRST':  # Move end verts to start vert locations
+                            if self.merge_location == 'FIRST':  # Move end vert to start vert location
                                 ev.co = sv.co
-                            elif self.merge_location == 'CENTER':  # Move end verts to centers
+                                if self.prefs.fix_uvs:
+                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv, ev], vert_snap=sv)
+                            elif self.merge_location == 'CENTER':  # Move verts to centers
                                 ev.co = find_center([sv, ev])
+                                if self.prefs.fix_uvs:
+                                    bmesh.ops.average_vert_facedata(self.bm, verts=[sv, ev])
                             elif self.merge_location == 'LAST':  # Moving not required but doing this for consistency
                                 sv.co = ev.co
+                                if self.prefs.fix_uvs:
+                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv, ev], vert_snap=ev)
                             bmesh.ops.weld_verts(self.bm, targetmap=merge_map)
                             bmesh.update_edit_mesh(self.me)
                 except TypeError:
@@ -603,7 +624,7 @@ class MergeTool(bpy.types.Operator):
             return {'CANCELLED'}
 
         if context.space_data.type == 'VIEW_3D':
-            context.workspace.status_text_set("Left click and drag to merge vertices. Esc or right click to cancel. Modifier keys during drag: [1], [2], [3], [A], [C], [F], [L]")
+            context.workspace.status_text_set("Left Click and drag to merge vertices or edges. Esc or Right Click to cancel. Modifier keys during drag: [1], [2], [3], [A], [C], [F], [L]")
 
             self.me = bpy.context.object.data
             self.world_matrix = bpy.context.object.matrix_world
@@ -674,6 +695,7 @@ class WorkSpaceMergeTool(bpy.types.WorkSpaceTool):
         col = layout.column()
         col.prop(tool_props, "merge_location")
         col.prop(prefs, "allow_multi")
+        col.prop(prefs, "fix_uvs")
 #        col.prop(tool_props, "wait_for_input")
 
 
