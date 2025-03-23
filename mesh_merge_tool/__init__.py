@@ -589,20 +589,19 @@ class MergeTool(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
-        if context.tool_settings.mesh_select_mode[0] and not context.tool_settings.mesh_select_mode[1]:
+        modes = context.tool_settings.mesh_select_mode
+        if modes[0] and not modes[1] and not modes[2]:
             self.sel_mode = 'VERT'
-        elif context.tool_settings.mesh_select_mode[1] and not context.tool_settings.mesh_select_mode[0]:
+        elif not modes[0] and modes[1] and not modes[2]:
             self.sel_mode = 'EDGE'
-        elif context.tool_settings.mesh_select_mode[2]:
+        elif not modes[0] and not modes[1] and modes[2]:
             self.sel_mode = 'FACE'
-
-        # Check for incompatible modes first
-        if self.sel_mode == 'FACE':
             self.report({'WARNING'}, "Merge Tool does not work with Face selection mode")
             return {'CANCELLED'}
-        if context.tool_settings.mesh_select_mode[0] and context.tool_settings.mesh_select_mode[1]:
-            self.report({'WARNING'}, "Selection Mode must be Vertex OR Edge, not both at the same time")
+        else:
+            self.report({'WARNING'}, "Selection Mode must be Vertex or Edge only")
             return {'CANCELLED'}
+
         if context.space_data.type == 'VIEW_3D':
             context.workspace.status_text_set("Left click and drag to merge vertices. Esc or right click to cancel. Modifier keys during drag: [1], [2], [3], [A], [C], [F], [L]")
 
