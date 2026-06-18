@@ -20,7 +20,7 @@ bl_info = {
     "name": "Merge Tool",
     "description": "An interactive tool for merging vertices and edges.",
     "author": "Andreas Strømberg, Chris Kohl",
-    "version": (1, 5, 0),
+    "version": (1, 5, 1),
     "blender": (2, 93, 0),
     "location": "View3D > TOOLS > Merge Tool",
     "warning": "",
@@ -34,13 +34,14 @@ import bpy
 import bmesh
 import os
 from mathutils import Vector
+from traceback import print_exc
 
 from importlib import reload
 if 'shaders' in globals():
     reload(shaders)
 
 from .shaders import draw_callback_3d, draw_callback_2d
-from .util import find_center, set_component
+from .util import find_center, set_component, merge_uv_points
 
 from bpy.props import (
     EnumProperty,
@@ -157,7 +158,7 @@ classes.append(MergeToolPreferences)
 
 
 def main(self, context, event):
-    """Run this function on left mouse, execute the ray cast"""
+    """Run this function on left mouse"""
     self.m_coord = event.mouse_region_x, event.mouse_region_y
 
     if self.started:
@@ -170,7 +171,7 @@ def main(self, context, event):
 
 
 class MergeTool(bpy.types.Operator):
-    """Modal object selection with a ray cast"""
+    """Modal object selection"""
     bl_idname = "mesh.merge_tool"
     bl_label = "Merge Tool"
     bl_options = {'REGISTER', 'UNDO'}
@@ -310,8 +311,8 @@ class MergeTool(bpy.types.Operator):
                                 ev0.co = sv0.co
                                 ev1.co = sv1.co
                                 if self.prefs.fix_uvs:
-                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv0, ev0], vert_snap=sv0)
-                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv1, ev1], vert_snap=sv1)
+                                    merge_uv_points(self, [sv0, ev0], sv0)
+                                    merge_uv_points(self, [sv1, ev1], sv1)
                             elif self.merge_location == 'CENTER':  # Move end verts to centers
                                 ev0.co = find_center(new_e0)
                                 ev1.co = find_center(new_e1)
@@ -322,8 +323,8 @@ class MergeTool(bpy.types.Operator):
                                 sv0.co = ev0.co
                                 sv1.co = ev1.co
                                 if self.prefs.fix_uvs:
-                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv0, ev0], vert_snap=ev0)
-                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv1, ev1], vert_snap=ev1)
+                                    merge_uv_points(self, [sv0, ev0], ev0)
+                                    merge_uv_points(self, [sv1, ev1], ev1)
                             bmesh.ops.weld_verts(self.bm, targetmap=merge_map)
                             bmesh.update_edit_mesh(self.me)
                         # Case where two edges share a vertex
@@ -337,7 +338,7 @@ class MergeTool(bpy.types.Operator):
                             if self.merge_location == 'FIRST':  # Move end vert to start vert location
                                 ev.co = sv.co
                                 if self.prefs.fix_uvs:
-                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv, ev], vert_snap=sv)
+                                    merge_uv_points(self, [sv, ev], sv)
                             elif self.merge_location == 'CENTER':  # Move verts to centers
                                 ev.co = find_center([sv, ev])
                                 if self.prefs.fix_uvs:
@@ -345,11 +346,12 @@ class MergeTool(bpy.types.Operator):
                             elif self.merge_location == 'LAST':  # Moving not required but doing this for consistency
                                 sv.co = ev.co
                                 if self.prefs.fix_uvs:
-                                    bmesh.ops.pointmerge_facedata(self.bm, verts=[sv, ev], vert_snap=ev)
+                                    merge_uv_points(self, [sv, ev], ev)
                             bmesh.ops.weld_verts(self.bm, targetmap=merge_map)
                             bmesh.update_edit_mesh(self.me)
                 except TypeError:
-                    print("That failed for some reason.")
+                    self.report({'ERROR'}, "Something went wrong. Undo and then check system console.")
+                    print_exc()
                     self.finish(context)
                     return {'CANCELLED'}
                 finally:
