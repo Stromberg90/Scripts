@@ -1,4 +1,5 @@
 """Helper utilities."""
+import bpy
 import bmesh
 from mathutils import Vector
 
@@ -36,3 +37,10 @@ def set_component(self, mode):
                 self.end_comp_transformed = self.world_matrix @ self.end_comp.co
             elif self.sel_mode == 'EDGE':
                 self.end_comp_transformed = self.world_matrix @ find_center(self.end_comp)
+
+def merge_uv_points(self, vertices, target):
+    if bpy.app.version[0] >= 5 and bpy.app.version[1] >= 2:
+    # Keyword was changed in Blender 5.2
+        bmesh.ops.pointmerge_facedata(self.bm, verts=vertices, vert_target=target)
+    else:
+        bmesh.ops.pointmerge_facedata(self.bm, verts=vertices, vert_snap=target)
