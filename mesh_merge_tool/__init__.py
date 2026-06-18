@@ -171,7 +171,7 @@ def main(self, context, event):
 
 
 class MergeTool(bpy.types.Operator):
-    """Modal object selection"""
+    """Modal tool that performs interactive vertex and edge merging"""
     bl_idname = "mesh.merge_tool"
     bl_label = "Merge Tool"
     bl_options = {'REGISTER', 'UNDO'}
